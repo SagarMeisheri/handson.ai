@@ -2,6 +2,12 @@
 
 An AI-powered Streamlit application that analyzes your resume against job descriptions and generates 5 personalized hands-on projects to help you prepare for your target role.
 
+## 📸 Screenshot
+
+![HandsOn.AI Interface](screenshots/app-demo.png)
+
+*Split-screen interface: Upload resume and job description on the left, get AI-generated project recommendations on the right*
+
 ## ✨ Features
 
 - 📄 **PDF Resume Upload** - Upload your resume in PDF format
@@ -146,6 +152,8 @@ handson.ai/
 ├── app.py                 # Main Streamlit application
 ├── llm_analysis.py        # AI analysis and project generation logic
 ├── requirements.txt       # Python dependencies
+├── screenshots/           # App screenshots for README
+│   └── app-demo.png      # Main interface screenshot
 ├── .env                   # API keys (create this - not in repo)
 ├── .gitignore            # Git ignore rules
 ├── LICENSE               # MIT License
