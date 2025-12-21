@@ -1,11 +1,5 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
 import json
-
-load_dotenv()
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+from utils import get_openrouter_client
 
 def summarize_resume(resume_text: str) -> dict:
     """
@@ -17,13 +11,7 @@ def summarize_resume(resume_text: str) -> dict:
     Returns:
         dict: Contains 'summary' and optionally 'reasoning' if available
     """
-    if not OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY not found in environment variables")
-    
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY,
-    )
+    client = get_openrouter_client()
     
     # API call with reasoning
     response = client.chat.completions.create(
@@ -62,13 +50,7 @@ def generate_job_projects(resume_text: str, job_description: str) -> dict:
     Returns:
         dict: Contains 'analysis_summary' and 'projects' list with 5 project recommendations
     """
-    if not OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY not found in environment variables")
-    
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY,
-    )
+    client = get_openrouter_client()
     
     prompt = f"""Analyze the following resume and job description to identify skill gaps and growth areas.
 Generate 5 hands-on projects that will help this candidate prepare for the role.

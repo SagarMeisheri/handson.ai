@@ -3,6 +3,7 @@ import pymupdf4llm
 import tempfile
 import pathlib
 from llm_analysis import generate_job_projects
+from url import fetch_job_content
 
 # Set page configuration
 st.set_page_config(
@@ -59,25 +60,60 @@ with left_col:
             except:
                 pass
     
-    # Job Description Input
-    st.markdown("### 📋 Job Description")
+    # URL Input Section
+    st.markdown("### 🔗 Fetch Job from URL")
+    job_url = st.text_input(
+        "Enter job posting URL (LinkedIn, Indeed, etc.)",
+        placeholder="https://www.linkedin.com/jobs/view/...",
+        help="We'll fetch and summarize the job details for you"
+    )
+    
+    fetch_button = st.button("🔍 Fetch Job Details", use_container_width=True)
+    
+    if fetch_button and job_url:
+        try:
+            with st.spinner("Fetching job details from URL... This may take 30-60 seconds"):
+                result = fetch_job_content(job_url)
+                st.session_state.fetched_job_content = result
+                st.session_state.fetched_job_url = job_url
+                st.success("✅ Job details fetched successfully!")
+        except Exception as e:
+            st.error(f"❌ Error fetching job details: {str(e)}")
+            st.info("💡 Please check the URL and try again, or paste the job description manually below")
+            # Clear any stale data
+            if 'fetched_job_content' in st.session_state:
+                del st.session_state.fetched_job_content
+            if 'fetched_job_url' in st.session_state:
+                del st.session_state.fetched_job_url
+    
+    # Show fetched content if available
+    if 'fetched_job_content' in st.session_state and st.session_state.fetched_job_content:
+        st.info(f"📌 Using job details from: {st.session_state.fetched_job_url}")
+        with st.expander("👁️ View Fetched Job Summary"):
+            st.markdown(st.session_state.fetched_job_content)
+    
+    st.divider()
+    
+    # Job Description Input (Manual)
+    st.markdown("### 📋 Or Paste Job Description Manually")
     job_description = st.text_area(
         "Paste the job description here",
         height=300,
         placeholder="Paste the complete job description including requirements, responsibilities, and qualifications...",
-        help="Provide as much detail as possible for better project recommendations"
+        help="Alternative to URL: Provide as much detail as possible for better project recommendations"
     )
     
     # Validation and Analysis Button
-    can_analyze = uploaded_file is not None and resume_text is not None and len(job_description.strip()) >= 50
+    has_job_info = (len(job_description.strip()) >= 50) or ('fetched_job_content' in st.session_state and st.session_state.fetched_job_content)
+    can_analyze = uploaded_file is not None and resume_text is not None and has_job_info
     
-    if not can_analyze and (uploaded_file is not None or job_description):
+    if not can_analyze and (uploaded_file is not None or job_description or 'fetched_job_content' in st.session_state):
         if not uploaded_file:
             st.warning("⚠️ Please upload a resume PDF")
         elif not resume_text:
             st.warning("⚠️ Resume processing failed")
-        elif len(job_description.strip()) < 50:
-            st.info("💡 Please provide a more detailed job description (at least 50 characters)")
+        elif not has_job_info:
+            st.info("💡 Please either fetch job details from URL or paste job description manually (at least 50 characters)")
     
     analyze_button = st.button(
         "🎯 Generate Project Recommendations",
@@ -112,10 +148,18 @@ with right_col:
     else:
         # Generate and display analysis
         try:
-            with st.spinner("🤖 Analyzing resume and job description... This may take 30-60 seconds"):
-                result = generate_job_projects(resume_text, job_description)
+            # Determine which job description to use (either/or, not both)
+            if 'fetched_job_content' in st.session_state and st.session_state.fetched_job_content:
+                final_job_description = st.session_state.fetched_job_content
+                job_source = "URL"
+            else:
+                final_job_description = job_description
+                job_source = "Manual Input"
             
-            st.success("✅ Analysis complete! Here are your personalized projects:")
+            with st.spinner("🤖 Analyzing resume and job description... This may take 30-60 seconds"):
+                result = generate_job_projects(resume_text, final_job_description)
+            
+            st.success(f"✅ Analysis complete! Here are your personalized projects (Job source: {job_source})")
             
             # Display analysis summary
             st.markdown("### 📊 Gap Analysis")
