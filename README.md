@@ -4,7 +4,7 @@ An AI-powered Streamlit application that analyzes your resume against job descri
 
 ## 📸 Screenshot
 
-![HandsOn.AI Interface](screenshots/app-demo.png)
+![HandsOn.AI Interface]
 
 *Split-screen interface: Upload resume and job description on the left, get AI-generated project recommendations on the right*
 
