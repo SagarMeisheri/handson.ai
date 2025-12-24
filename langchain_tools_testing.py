@@ -1,6 +1,9 @@
 import asyncio
 import os
 
+import feedparser
+import requests
+from urllib.parse import quote
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.tools import tool
@@ -47,6 +50,57 @@ def reverse_text(text: str) -> str:
     return f"Reversed: {text[::-1]}"
 
 
+@tool
+def google_news(query: str, days: int = 7) -> str:
+    """
+    Fetch the latest news headlines from Google News for a given search query.
+    
+    Args:
+        query: The search topic or keywords (e.g., 'artificial intelligence', 'climate change', 'sports')
+        days: Number of days to look back for news (default: 7)
+    
+    Returns:
+        A formatted string with news headlines, sources, and publication dates.
+        
+    Example: google_news('technology', 3) returns tech news from the last 3 days
+    """
+    try:
+        # Construct Google News RSS URL
+        rss_url = f"https://news.google.com/rss/search?q={quote(query)}+when:{days}d&hl=en-US&gl=US&ceid=US:en"
+        
+        # Fetch RSS feed with timeout
+        response = requests.get(rss_url, timeout=10)
+        response.raise_for_status()
+        
+        # Parse the RSS feed
+        feed = feedparser.parse(response.content)
+        
+        total_articles = len(feed.entries)
+        
+        if total_articles == 0:
+            return f"No news found for '{query}' in the last {days} day(s)."
+        
+        # Format the results (limit to top 10 for readability)
+        max_results = min(10, total_articles)
+        headlines = []
+        
+        for i, item in enumerate(feed.entries[:max_results], 1):
+            source = item.source.title if hasattr(item, 'source') and hasattr(item.source, 'title') else "Unknown"
+            headlines.append(f"{i}. {item.title}\n   📰 Source: {source}\n   📅 Published: {item.published}")
+        
+        result = f"Found {total_articles} articles for '{query}' (showing top {max_results}):\n\n"
+        result += "\n\n".join(headlines)
+        
+        return result
+        
+    except requests.exceptions.Timeout:
+        return f"Error: Request timed out while fetching news for '{query}'"
+    except requests.exceptions.RequestException as e:
+        return f"Error fetching news for '{query}': {str(e)}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
 async def streaming_multi_step_agent():
     """
     Demonstrates LangChain agent making MULTIPLE tool calls with streaming.
@@ -63,7 +117,7 @@ async def streaming_multi_step_agent():
     )
     
     # Define available tools
-    tools = [calculator, get_word_length, reverse_text]
+    tools = [calculator, get_word_length, reverse_text, google_news]
     
     print("🤖 Multi-Step Streaming Agent Ready!\n")
     print("Available tools:")
@@ -75,6 +129,8 @@ async def streaming_multi_step_agent():
     print("  • 'What is 100 divided by 4, then multiply by 3'")
     print("  • 'Reverse the word Python, then tell me its length'")
     print("  • 'Calculate (45 + 55) * 2, reverse it, then get its length'")
+    print("  • 'Get me the latest news on artificial intelligence'")
+    print("  • 'What are the top headlines about climate change from the last 3 days?'")
     print("\nType 'quit' to exit.\n")
     print("=" * 70)
     
@@ -97,12 +153,13 @@ STRICT RULES:
 2. For ANY calculation (addition, multiplication, etc.) - use the calculator tool.
 3. For ANY text length question - use the get_word_length tool.
 4. For ANY text reversal - use the reverse_text tool.
-5. If a question requires multiple operations, break it down and use tools for EACH step.
-6. Do NOT perform mental math or estimate - ALWAYS call the calculator.
-7. Do NOT count characters yourself - ALWAYS call get_word_length.
-8. Show your work by calling tools step-by-step, then synthesize the final answer.
+5. For ANY news or headline requests - use the google_news tool.
+6. If a question requires multiple operations, break it down and use tools for EACH step.
+7. Do NOT perform mental math or estimate - ALWAYS call the calculator.
+8. Do NOT count characters yourself - ALWAYS call get_word_length.
+9. Show your work by calling tools step-by-step, then synthesize the final answer.
 
-If a question cannot be answered with the available tools, say "I can only help with calculations, text length, and text reversal using my tools."
+If a question cannot be answered with the available tools, say "I can only help with calculations, text length, text reversal, and fetching news using my tools."
 """
     
     # Create ReAct agent with state_modifier for custom system prompt
