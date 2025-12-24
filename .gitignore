@@ -51,3 +51,5 @@ tmp/
 output.md
 pdf_processor.py
 Untitled
+
+.cursor/mcp.json
