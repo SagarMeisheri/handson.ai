@@ -79,14 +79,30 @@ async def streaming_multi_step_agent():
     print("=" * 70)
     
     # System prompt to allow agent to use LLM knowledge when tools aren't needed
-    system_prompt = """You are a helpful AI assistant with access to tools.
+#     system_prompt = """You are a helpful AI assistant with access to tools.
 
-IMPORTANT INSTRUCTIONS:
-1. If a user's question can be answered using your available tools, USE THEM.
-2. If NO tool is applicable, answer the question using your own knowledge directly.
-3. Do NOT refuse to answer just because no tool is available - use your knowledge!
-4. For factual questions (dates, locations, general knowledge), answer directly from your knowledge.
-5. Only use tools when they are genuinely needed for the task.
+# IMPORTANT INSTRUCTIONS:
+# 1. If a user's question can be answered using your available tools, USE THEM.
+# 2. If NO tool is applicable, answer the question using your own knowledge directly.
+# 3. Do NOT refuse to answer just because no tool is available - use your knowledge!
+# 4. For factual questions (dates, locations, general knowledge), answer directly from your knowledge.
+# 5. Only use tools when they are genuinely needed for the task.
+# """
+
+        # System prompt to enforce ONLY tool use for answering questions
+    system_prompt = """You are a precise AI assistant that ONLY answers using tools.
+
+STRICT RULES:
+1. You MUST use tools for EVERY part of your response. Never compute or reason without tools.
+2. For ANY calculation (addition, multiplication, etc.) - use the calculator tool.
+3. For ANY text length question - use the get_word_length tool.
+4. For ANY text reversal - use the reverse_text tool.
+5. If a question requires multiple operations, break it down and use tools for EACH step.
+6. Do NOT perform mental math or estimate - ALWAYS call the calculator.
+7. Do NOT count characters yourself - ALWAYS call get_word_length.
+8. Show your work by calling tools step-by-step, then synthesize the final answer.
+
+If a question cannot be answered with the available tools, say "I can only help with calculations, text length, and text reversal using my tools."
 """
     
     # Create ReAct agent with state_modifier for custom system prompt
@@ -108,44 +124,58 @@ IMPORTANT INSTRUCTIONS:
             step_number = 0
             tool_call_count = 0
             
-            # Stream through agent events
-            async for event in agent.astream(
+            # Stream through agent events using the latest stream_mode="updates" pattern
+            # See: https://docs.langchain.com/oss/python/langchain/streaming
+            async for chunk in agent.astream(
                 {"messages": [{"role": "user", "content": user_input}]},
-                stream_mode="values"
+                stream_mode="updates"
             ):
-                messages = event.get("messages", [])
-                if not messages:
-                    continue
-                
-                last_message = messages[-1]
-                
-                # Agent is planning to use tools
-                if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-                    for tool_call in last_message.tool_calls:
-                        tool_call_count += 1
-                        tool_name = tool_call.get("name", "unknown")
-                        tool_args = tool_call.get("args", {})
-                        
-                        print(f"🔧 Tool Call #{tool_call_count}: {tool_name}")
-                        
-                        # Show what the agent is passing to the tool
-                        for key, value in tool_args.items():
-                            print(f"   └─ {key}: {value}")
-                
-                # Tool execution completed
-                if last_message.type == "tool":
-                    step_number += 1
-                    print(f"\n✅ Step {step_number} Complete: {last_message.name}")
-                    print(f"   └─ Output: {last_message.content}")
-                    print()
-                
-                # Agent's final reasoning and answer
-                if last_message.type == "ai" and last_message.content:
-                    # Check if this is the final answer (no more tool calls)
-                    if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
-                        print(f"💡 Agent's Reasoning & Answer:")
-                        print(f"   {last_message.content}")
-                        print(f"\n📊 Summary: Used {tool_call_count} tool call(s) across {step_number} step(s)")
+                for step, data in chunk.items():
+                    messages = data.get("messages", [])
+                    if not messages:
+                        continue
+                    
+                    last_message = messages[-1]
+                    
+                    # "model" step: LLM is generating a response (may include tool calls)
+                    if step == "model":
+                        # Check if the model is requesting tool calls
+                        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+                            for tool_call in last_message.tool_calls:
+                                tool_call_count += 1
+                                tool_name = tool_call.get("name", "unknown")
+                                tool_args = tool_call.get("args", {})
+                                
+                                print(f"🔧 Tool Call #{tool_call_count}: {tool_name}")
+                                
+                                # Show what the agent is passing to the tool
+                                for key, value in tool_args.items():
+                                    print(f"   └─ {key}: {value}")
+                        else:
+                            # Final answer from the model (no tool calls)
+                            # Use content_blocks for standardized access, fallback to content
+                            content = (
+                                last_message.content_blocks[0].get("text", "")
+                                if hasattr(last_message, "content_blocks") and last_message.content_blocks
+                                else last_message.content
+                            )
+                            if content:
+                                print(f"💡 Agent's Reasoning & Answer:")
+                                print(f"   {content}")
+                                print(f"\n📊 Summary: Used {tool_call_count} tool call(s) across {step_number} step(s)")
+                    
+                    # "tools" step: Tool execution completed
+                    elif step == "tools":
+                        step_number += 1
+                        # Use content_blocks for standardized access, fallback to content
+                        tool_output = (
+                            last_message.content_blocks[0].get("text", "")
+                            if hasattr(last_message, "content_blocks") and last_message.content_blocks
+                            else last_message.content
+                        )
+                        print(f"\n✅ Step {step_number} Complete: {last_message.name}")
+                        print(f"   └─ Output: {tool_output}")
+                        print()
         
         except Exception as e:
             print(f"\n❌ Error: {e}")
