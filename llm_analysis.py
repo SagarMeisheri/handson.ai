@@ -134,3 +134,151 @@ Return ONLY the JSON object, no additional text."""
             ],
             "raw_response": content
         }
+
+
+def generate_projects_from_job(job_description: str, job_title: str = "", company: str = "", resume_text: str = None) -> dict:
+    """
+    Generate 3 hands-on project recommendations based on a job description.
+    Resume is optional - if provided, projects are tailored to fill skill gaps.
+    
+    Args:
+        job_description: The job description text
+        job_title: The job title (optional, for context)
+        company: The company name (optional, for context)
+        resume_text: Optional resume text in markdown format
+        
+    Returns:
+        dict: Contains 'analysis_summary' and 'projects' list with 3 project recommendations
+    """
+    client = get_openrouter_client()
+    
+    # Build context header
+    context_parts = []
+    if job_title:
+        context_parts.append(f"Job Title: {job_title}")
+    if company:
+        context_parts.append(f"Company: {company}")
+    context_header = "\n".join(context_parts)
+    
+    # Build prompt based on whether resume is provided
+    if resume_text:
+        prompt = f"""Analyze the following job description and resume to identify skill gaps.
+Generate 3 hands-on projects that will help this candidate prepare for the role.
+
+{context_header}
+
+JOB DESCRIPTION:
+{job_description}
+
+CANDIDATE RESUME:
+{resume_text}
+
+Please provide:
+1. A brief analysis summary (2-3 sentences) identifying gaps between the candidate's current skills and job requirements
+2. 3 practical hands-on projects tailored to bridge these specific gaps
+
+For each project, include:
+- Title: Clear, specific project name
+- Description: 2-3 sentences explaining what the project does and why it's relevant to this role
+- Main Steps: 3-5 concrete, actionable steps to complete the project
+- Skills Learned: Key skills that directly map to the job requirements
+
+Format your response as a JSON object with this structure:
+{{
+    "analysis_summary": "Brief gap analysis between resume and job requirements",
+    "projects": [
+        {{
+            "title": "Project name",
+            "description": "What the project does and why it matters",
+            "steps": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"],
+            "skills": ["Skill 1", "Skill 2", "Skill 3"]
+        }}
+    ]
+}}
+
+Return ONLY the JSON object, no additional text."""
+    else:
+        prompt = f"""Analyze the following job description and generate 3 hands-on projects 
+that would help someone prepare for this role and stand out as a candidate.
+
+{context_header}
+
+JOB DESCRIPTION:
+{job_description}
+
+Please provide:
+1. A brief summary (2-3 sentences) of the key skills and technologies required for this role
+2. 3 practical hands-on projects that would demonstrate competency in these areas
+
+For each project, include:
+- Title: Clear, specific project name
+- Description: 2-3 sentences explaining what the project does and why it's relevant to this role
+- Main Steps: 3-5 concrete, actionable steps to complete the project
+- Skills Learned: Key skills that directly map to the job requirements
+
+Format your response as a JSON object with this structure:
+{{
+    "analysis_summary": "Brief summary of key skills and technologies for this role",
+    "projects": [
+        {{
+            "title": "Project name",
+            "description": "What the project does and why it matters",
+            "steps": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"],
+            "skills": ["Skill 1", "Skill 2", "Skill 3"]
+        }}
+    ]
+}}
+
+Return ONLY the JSON object, no additional text."""
+    
+    response = client.chat.completions.create(
+        model="nvidia/nemotron-3-nano-30b-a3b:free",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.7
+    )
+    
+    # Extract the response content
+    content = response.choices[0].message.content
+    
+    # Try to parse JSON from the response
+    try:
+        # Sometimes the model wraps JSON in markdown code blocks
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        result = json.loads(content)
+        
+        # Validate the structure
+        if "analysis_summary" not in result or "projects" not in result:
+            raise ValueError("Invalid response structure")
+        
+        if len(result["projects"]) < 3:
+            raise ValueError(f"Expected 3 projects, got {len(result['projects'])}")
+        
+        # Limit to 3 projects
+        result["projects"] = result["projects"][:3]
+        
+        return result
+        
+    except (json.JSONDecodeError, ValueError) as e:
+        # If JSON parsing fails, return a fallback structure
+        return {
+            "analysis_summary": "Analysis completed. Here are your project recommendations.",
+            "projects": [
+                {
+                    "title": f"Project {i+1}",
+                    "description": "Project details generated by AI",
+                    "steps": ["Step 1", "Step 2", "Step 3"],
+                    "skills": ["Relevant skills"]
+                }
+                for i in range(3)
+            ],
+            "raw_response": content
+        }
