@@ -1,6 +1,8 @@
-# 🎯 HandsOn.AI - Job Match Analyzer
+# 🚀 HandsOn.AI - Job Search & Project Recommendations
 
-An AI-powered Streamlit application that analyzes your resume against job descriptions and generates 5 personalized hands-on projects to help you prepare for your target role.
+An AI-powered Streamlit application with two powerful modes:
+1. **Job Search** - Browse jobs from multiple job boards and get AI-generated project recommendations for any role
+2. **Resume Analyzer** - Upload your resume and job description to get personalized hands-on projects
 
 ## 📸 Screenshots
 
@@ -16,22 +18,34 @@ An AI-powered Streamlit application that analyzes your resume against job descri
 
 ## ✨ Features
 
-- 📄 **PDF Resume Upload** - Upload your resume in PDF format
-- 🔗 **URL Job Fetching** - Automatically fetch job details from LinkedIn URLs (NEW!)
-- 📋 **Manual Job Description** - Or paste any job description manually
-- 🤖 **AI-Powered Gap Analysis** - Identifies skill gaps between your profile and job requirements
-- 🎯 **5 Custom Project Recommendations** - Get tailored hands-on projects with:
+### 🔍 Job Search Mode (NEW!)
+- **Multi-Platform Job Search** - Search jobs from Indeed, LinkedIn, Google, and ZipRecruiter simultaneously
+- **10 Popular Job Categories** - Quick access to Software Engineer, Data Scientist, ML Engineer, DevOps, and more
+- **20 Real-Time Results** - Get 20 job listings per search with 1-hour caching
+- **3 Project Recommendations** - Click any job to get AI-generated project ideas tailored to that role
+- **Optional Resume Integration** - Upload your resume for personalized gap analysis
+
+### 📄 Resume Analyzer Mode
+- **PDF Resume Upload** - Upload your resume in PDF format
+- **URL Job Fetching** - Automatically fetch job details from LinkedIn URLs
+- **Manual Job Description** - Or paste any job description manually
+- **AI-Powered Gap Analysis** - Identifies skill gaps between your profile and job requirements
+- **5 Custom Project Recommendations** - Get tailored hands-on projects with:
   - Clear project descriptions
   - Step-by-step implementation guides (3-5 steps per project)
   - Skills you'll learn mapped to job requirements
-- 📥 **Export Projects** - Download all recommendations as a markdown file
-- 🆓 **Completely Free** - Uses NVIDIA's free Nemotron model via OpenRouter
+- **Export Projects** - Download all recommendations as a markdown file
+
+### 🆓 Completely Free
+- Uses NVIDIA's free Nemotron model via OpenRouter
+- No credit card required
+- No usage limits
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher (required for JobSpy)
 - OpenRouter API key (free - see setup below)
 
 ### Installation
@@ -98,9 +112,32 @@ OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
 
 ## 📖 How to Use
 
+### Job Search Mode
+
+1. **Select Job Search** in the sidebar (default mode)
+
+2. **Optional: Upload Resume**
+   - In the sidebar, upload your PDF resume for personalized recommendations
+   - The resume helps identify skill gaps specific to your profile
+
+3. **Choose a Job Category**
+   - Click any of the 10 job category buttons (Software Engineer, Data Scientist, etc.)
+   - The app will search across Indeed, LinkedIn, Google, and ZipRecruiter
+
+4. **Browse Job Results**
+   - View 20 job listings with title, company, and location
+   - Each card shows which job board the listing came from
+
+5. **Get Project Recommendations**
+   - Click "View & Get Projects" on any job
+   - View job details and click "Generate 3 Project Ideas"
+   - AI generates tailored project recommendations based on the job description
+   - If you uploaded a resume, recommendations are personalized to your skill gaps
+
+### Resume Analyzer Mode
+
 1. **Upload Your Resume**
-   - Click "Upload Your Resume (PDF)" in the left column
-   - Select your PDF resume file
+   - Upload your PDF resume in the sidebar
    - Wait for it to process (usually 2-3 seconds)
 
 2. **Add Job Description** (Choose one method):
@@ -109,55 +146,62 @@ OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
    - Paste a LinkedIn job URL into the "Enter job posting URL" field
    - Click **"🔍 Fetch Job Details"**
    - Wait 30-60 seconds for the app to fetch and parse the job posting
-   - The job details will be automatically loaded and displayed
    
    **Option B: Manual Paste**
    - Copy the full job description from any job posting
    - Paste it into the "Paste the job description here" text area
-   - Include requirements, responsibilities, and qualifications for best results
 
 3. **Generate Projects**
    - Click **"🎯 Generate Project Recommendations"**
    - Wait 30-60 seconds for AI analysis
-   - Review your personalized projects in the right column
+   - Review your 5 personalized projects
 
-4. **Explore Projects**
-   - Each project includes:
-     - A clear title and description
-     - Step-by-step implementation guide
-     - Skills you'll learn
-   - First project is expanded by default
-   - Click any project to expand/collapse
-
-5. **Download & Practice**
+4. **Download & Practice**
    - Click **"📥 Download All Projects as Markdown"**
-   - Save for offline reference
    - Start building the projects!
 
 ## 🏗️ How It Works
 
 ```mermaid
 flowchart LR
-    Resume[Resume PDF] --> Extract[PDF to Markdown]
-    URL[LinkedIn URL] --> Fetch[Fetch Job Content]
-    JobDesc[Job Description] --> LLM[AI Analysis]
-    Fetch --> LLM
-    Extract --> LLM
-    LLM --> Gap[Gap Analysis]
-    Gap --> Projects[5 Custom Projects]
-    Projects --> Display[Split-Screen Display]
+    subgraph JobSearch[Job Search Mode]
+        Keywords[Job Keywords] --> JobSpy[JobSpy Scraper]
+        JobSpy --> Jobs[20 Job Results]
+        Jobs --> Select[Select Job]
+        Select --> Projects3[3 Project Ideas]
+    end
+    
+    subgraph ResumeMode[Resume Analyzer Mode]
+        Resume[Resume PDF] --> Extract[PDF to Markdown]
+        URL[LinkedIn URL] --> Fetch[Fetch Job Content]
+        JobDesc[Job Description] --> LLM[AI Analysis]
+        Fetch --> LLM
+        Extract --> LLM
+        LLM --> Gap[Gap Analysis]
+        Gap --> Projects5[5 Custom Projects]
+    end
+    
+    OptResume[Optional Resume] -.-> Projects3
 ```
 
+### Job Search Mode Flow
+1. **Category Selection**: User clicks a job category (e.g., "Software Engineer")
+2. **Multi-Platform Search**: JobSpy queries Indeed, LinkedIn, Google, and ZipRecruiter
+3. **Results Display**: 20 aggregated job listings shown with details
+4. **Project Generation**: AI creates 3 project recommendations based on job description
+5. **Resume Enhancement**: If resume uploaded, projects target specific skill gaps
+
+### Resume Analyzer Mode Flow
 1. **PDF Processing**: Converts your resume to structured markdown using `pymupdf4llm`
 2. **Job Fetching** (Optional): Fetches job details from LinkedIn using their Guest API
 3. **AI Analysis**: Sends both resume and job description to NVIDIA's Nemotron model
 4. **Gap Identification**: AI identifies skills you need to develop
 5. **Project Generation**: Creates 5 hands-on projects tailored to bridge those gaps
-6. **Structured Output**: Presents projects with clear steps and learning outcomes
 
 ## 🛠️ Tech Stack
 
 - **[Streamlit](https://streamlit.io/)** - Web app framework
+- **[JobSpy](https://github.com/speedyapply/JobSpy)** - Multi-platform job scraping (NEW!)
 - **[pymupdf4llm](https://pypi.org/project/pymupdf4llm/)** - PDF to markdown conversion
 - **[OpenRouter](https://openrouter.ai)** - AI model access
 - **[NVIDIA Nemotron-3-Nano](https://openrouter.ai/models/nvidia/nemotron-3-nano-30b-a3b)** - Free AI model
@@ -170,7 +214,8 @@ flowchart LR
 
 ```
 handson.ai/
-├── app.py                    # Main Streamlit application
+├── app.py                    # Main Streamlit application (both modes)
+├── job_scraper.py            # JobSpy wrapper and job search logic (NEW!)
 ├── llm_analysis.py           # AI analysis and project generation logic
 ├── url.py                    # Job URL fetching and parsing
 ├── utils.py                  # Utility functions (OpenRouter client)
@@ -184,15 +229,42 @@ handson.ai/
 └── README.md                # This file
 ```
 
+## 🔍 Job Search Feature
+
+The Job Search mode uses [JobSpy](https://github.com/speedyapply/JobSpy) to aggregate job listings from multiple platforms:
+
+### Supported Job Boards
+- ✅ **Indeed** - Most reliable, no rate limiting
+- ✅ **LinkedIn** - May rate limit after many requests
+- ✅ **Google Jobs** - Good coverage
+- ✅ **ZipRecruiter** - US/Canada jobs
+
+### Job Categories
+- Software Engineer
+- Data Scientist
+- Machine Learning Engineer
+- DevOps Engineer
+- Backend Developer
+- Frontend Developer
+- Full Stack Developer
+- Product Manager
+- Cloud Engineer
+- Data Analyst
+
+### Caching
+Results are cached for 1 hour to:
+- Improve response times on repeat searches
+- Reduce API calls to job boards
+- Avoid rate limiting
+
 ## 🔗 URL Fetching Feature
 
-The app can automatically fetch job details from LinkedIn URLs using LinkedIn's Guest API. This feature:
+The Resume Analyzer mode can automatically fetch job details from LinkedIn URLs using LinkedIn's Guest API. This feature:
 
 - ✅ Works with LinkedIn job posting URLs (e.g., `https://www.linkedin.com/jobs/view/123456789`)
 - ✅ Extracts job title and full description
 - ✅ Converts to clean markdown format
 - ✅ Has built-in timeout protection (won't hang indefinitely)
-- ✅ Provides debug output in terminal for troubleshooting
 
 ### Troubleshooting URL Fetching
 
@@ -203,11 +275,6 @@ If URL fetching fails or times out:
 3. **Network issues** - VPN or firewall might block requests to LinkedIn
 4. **Rate limiting** - LinkedIn may temporarily block requests; wait a few minutes
 5. **Fallback option** - You can always paste the job description manually
-
-### Supported Platforms
-
-- ✅ **LinkedIn** - Fully supported via Guest API
-- ⏳ **Indeed, Glassdoor, etc.** - Coming soon!
 
 ## 🔧 Configuration
 
@@ -232,6 +299,18 @@ model="nvidia/nemotron-3-nano-30b-a3b:free"
 # - "google/gemma-7b-it:free"
 ```
 
+### Customizing Job Keywords
+
+Edit the `JOB_KEYWORDS` list in `job_scraper.py` to change available job categories:
+
+```python
+JOB_KEYWORDS = [
+    "Software Engineer",
+    "Data Scientist",
+    # Add your own categories...
+]
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -243,7 +322,8 @@ This project is open source and available under the [MIT License](LICENSE).
 ## 🙏 Acknowledgments
 
 - Built with [Streamlit](https://streamlit.io/)
-- Powered by [OpenRouter](https://openrouter.ai)
+- Job search powered by [JobSpy](https://github.com/speedyapply/JobSpy)
+- AI powered by [OpenRouter](https://openrouter.ai)
 - Uses NVIDIA's Nemotron-3-Nano model
 - PDF processing by [pymupdf4llm](https://github.com/pymupdf/pymupdf4llm)
 
@@ -253,8 +333,9 @@ If you have questions or run into issues:
 
 1. Check that your `.env` file is set up correctly
 2. Verify your OpenRouter API key is valid
-3. Ensure all dependencies are installed: `pip install -r requirements.txt`
-4. Open an issue on GitHub
+3. Ensure Python 3.10+ is installed (required for JobSpy)
+4. Ensure all dependencies are installed: `pip install -r requirements.txt`
+5. Open an issue on GitHub
 
 ## 🌟 Star This Repo
 
